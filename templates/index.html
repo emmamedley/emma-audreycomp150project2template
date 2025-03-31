@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive Button</title>
+  <title>Magic 8 Ball</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Click the button to update the number:</h1>
-    <button id="myButton">Click me!</button>
-    <p>Number of clicks: <span id="clickCount">0</span></p>
-  </div>
-  <div class="container">
-    <h1>Case Flipper</h1>
-    <textarea id="inputText" rows="5" cols="50"></textarea>
-    <br>
-    <button id="flipButton">Flip Case</button>
-    <p>Result: <span id="result"></span></p>
+    <h1>Magic 8 Ball</h1>
+    <p>Ask a question, then click the ball for an answer</p>
+    <div class="eight-ball" id="magicBall">
+      <div class="eight-ball-inner">
+        <span>8</span>
+      </div>
+    </div>
+    <div class="answer-container">
+      <p id="answer">Ask the Magic 8 Ball a question...</p>
+    </div>
   </div>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
