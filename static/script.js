@@ -9,8 +9,7 @@ answerElement.style.opacity = 0;
 let shakeCount = 0;
 const maxShakes = 5;
 const shakeInterval = setInterval(() => {
-magicBall.style.transform = scale(0.95) translate(${Math.random() * 10 - 5}px, 
-${Math.random() * 10 - 5}px);
+  magicBall.style.transform = `scale(0.95) translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
 shakeCount++;
 if (shakeCount >= maxShakes) {
   clearInterval(shakeInterval);
