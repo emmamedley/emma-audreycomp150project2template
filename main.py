@@ -2,7 +2,7 @@ from flask import Flask, jsonify, render_template, request
 import random
 
 app = Flask(__name__)
-
+count=0 
 # List of Magic 8 Ball responses
 RESPONSES = [
     "It is certain.",
@@ -52,4 +52,4 @@ def flip_case():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
+
