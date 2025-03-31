@@ -22,4 +22,5 @@ def flip_case():
     return jsonify({'flipped_text': flipped_text})
 
 if __name__ == '__main__':
+
     app.run(debug=True)
