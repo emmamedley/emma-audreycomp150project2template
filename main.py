@@ -3,28 +3,29 @@ import random
 
 app = Flask(__name__)
 count=0 
-# List of Magic 8 Ball responses
+   # List of Magic 8 Ball responses as Python code
 RESPONSES = [
-    "It is certain.",
-    "It is decidedly so.",
-    "Without a doubt.",
-    "Yes definitely.",
-    "You may rely on it.",
-    "As I see it, yes.",
-    "Most likely.",
-    "Outlook good.",
-    "Yes.",
-    "Signs point to yes.",
-    "Reply hazy, try again.",
-    "Ask again later.",
-    "Better not tell you now.",
-    "Cannot predict now.",
-    "Concentrate and ask again.",
-    "Don't count on it.",
-    "My reply is no.",
-    "My sources say no.",
-    "Outlook not so good.",
-    "Very doubtful."
+    "if question:\n  return True  # It is certain.",
+    "result = True  # It is decidedly so.",
+    "assert answer == True  # Without a doubt.",
+    "return True  # Yes definitely.",
+    "confidence = 1.0  # You may rely on it.",
+    "if analyze(question):\n  print('Yes')  # As I see it, yes.",
+    "probability = random.random()\nif probability > 0.2:\n  return True  # Most likely.",
+    "forecast = 'positive'  # Outlook good.",
+    "answer = True  # Yes.",
+    "indicators = [True, True, False, True]\nif sum(indicators) > len(indicators)/2:\n  return True  # Signs point to yes.",
+    "import random\nif random.random() < 0.5:\n  return 'Try again'  # Reply hazy, try again.",
+    "# Error: Insufficient data\nraise TimeoutError('Ask again later.')",
+    "# TODO: Implement this feature\npass  # Better not tell you now.",
+    "try:\n  predict(question)\nexcept FutureUncertainError:\n  pass  # Cannot predict now.",
+    "while not clear_thinking:\n  meditate()  # Concentrate and ask again.",
+    "assert answer != True  # Don't count on it.",
+    "return False  # My reply is no.",
+    "survey_results = {'yes': 20, 'no': 80}\n# My sources say no.",
+    "forecast = 'negative'  # Outlook not so good.",
+    "confidence = 0.1  # Very doubtful."
+]
 ]
 
 @app.route('/')
