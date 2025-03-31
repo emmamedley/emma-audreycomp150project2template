@@ -1,24 +1,65 @@
 .container {
   text-align: center;
-  margin-top: 100px;
+  margin-top: 50px;
+  font-family: Arial, sans-serif;
 }
 
-textarea {
-  resize: none;
-  font-size: 16px;
+.eight-ball {
+  width: 300px;
+  height: 300px;
+  background-color: #000;
+  border-radius: 50%;
+  margin: 30px auto;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s;
+}
+
+.eight-ball:hover {
+  transform: scale(1.05);
+}
+
+.eight-ball:active {
+  transform: scale(0.95);
+}
+
+.eight-ball-inner {
+  width: 100px;
+  height: 100px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 30px;
+  left: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eight-ball-inner span {
+  font-size: 70px;
+  font-weight: bold;
+}
+
+.answer-container {
+  margin-top: 20px;
+  min-height: 60px;
   padding: 10px;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 18px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
+#answer {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  transition: opacity 0.5s;
 }
 
-button:hover {
-  background-color: #45a049;
+.fade-in {
+  animation: fadeIn 1.5s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
