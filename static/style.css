@@ -63,3 +63,46 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Spotify button styling */
+.spotify-section {
+  margin-top: 30px;
+}
+
+.spotify-button {
+  background-color: #1DB954;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.spotify-button:hover {
+  background-color: #1ed760;
+  transform: scale(1.05);
+}
+
+.spotify-button:active {
+  transform: scale(0.95);
+}
+
+.spotify-logo {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.spotify-status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #555;
+  min-height: 20px;
+}
