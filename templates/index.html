@@ -1,25 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Magic 8 Ball</title>
+  <title>Magic 8 Ball - Mood Music</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Magic 8 Ball</h1>
-    <p>Ask a question, then click the ball for an answer</p>
+    <h1>Magic 8 Ball - Mood Music</h1>
+    <p>Enter your mood, then shake the ball for a song recommendation!</p>
+    
+    <div class="mood-input">
+      <label for="moodSelector">How are you feeling?</label>
+      <select id="moodSelector">
+        <option value="happy">Happy</option>
+        <option value="sad">Sad</option>
+        <option value="angry">Angry</option>
+        <option value="relaxed">Relaxed</option>
+        <option value="energetic">Energetic</option>
+        <option value="romantic">Romantic</option>
+        <option value="focused">Focused</option>
+        <option value="nostalgic">Nostalgic</option>
+      </select>
+    </div>
+    
     <div class="eight-ball" id="magicBall">
       <div class="eight-ball-inner">
         <span>8</span>
       </div>
     </div>
+    
     <div class="answer-container">
-      <p id="answer">Ask the Magic 8 Ball a question...</p>
+      <p id="answer">Shake the Magic 8 Ball for a song recommendation...</p>
     </div>
+    
+    <div id="songRecommendation" class="song-recommendation">
+      <!-- Song recommendation will appear here -->
+    </div>
+    
     <div class="spotify-section">
-      <button id="spotifyButton" class="spotify-button">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1024px-Spotify_logo_without_text.svg.png" alt="Spotify Logo" class="spotify-logo">
+      <button id="spotifyConnectBtn" class="spotify-button">
+        <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png" alt="Spotify Logo" class="spotify-logo">
         Connect to Spotify
       </button>
       <div id="spotifyStatus" class="spotify-status"></div>

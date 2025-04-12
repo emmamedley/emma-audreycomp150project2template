@@ -2,19 +2,17 @@ from flask import Flask, jsonify, render_template, request, redirect, session, u
 import random
 import os
 import requests
-import uuid
+import base64
+import urllib.parse
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # For session management
-count = 0
+# Set a secret key for sessions - in production use a strong, randomly generated key
+app.secret_key = "your_secret_key_here"
 
-# Spotify API credentials
-# You'll need to register your app on the Spotify Developer Dashboard
-# and replace these with your own credentials
-SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
-SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
-SPOTIFY_REDIRECT_URI = "http://localhost:5000/callback"  # Change to your actual domain in production
-SPOTIFY_API_BASE = "https://api.spotify.com/v1"
+# Spotify API credentials - you'll need to replace these with your own
+SPOTIFY_CLIENT_ID = "c0f94698a04a46f99e22cda3b8f64029"
+SPOTIFY_CLIENT_SECRET = "e3058ec934944a559421b5d6f72f9ede"
+SPOTIFY_REDIRECT_URI = "http://localhost:80/spotify-callback"
 
 # List of Magic 8 Ball responses as Python code
 RESPONSES = [
@@ -40,22 +38,16 @@ RESPONSES = [
     "confidence = 0.1  # Very doubtful."
 ]
 
-# Map 8 Ball responses to Spotify mood categories
-MOOD_MAPPING = {
-    "positive": ["It is certain", "It is decidedly so", "Without a doubt", "Yes definitely", 
-                 "You may rely on it", "As I see it, yes", "Most likely", "Outlook good", 
-                 "Yes", "Signs point to yes"],
-    "uncertain": ["Reply hazy, try again", "Ask again later", "Better not tell you now",
-                  "Cannot predict now", "Concentrate and ask again"],
-    "negative": ["Don't count on it", "My reply is no", "My sources say no",
-                 "Outlook not so good", "Very doubtful"]
-}
-
-# Spotify playlist IDs for different moods
-SPOTIFY_PLAYLISTS = {
-    "positive": "37i9dQZF1DXdPec7aLTmlC",  # Happy Hits playlist
-    "uncertain": "37i9dQZF1DWSqmBTGDYngZ",  # Mood Booster playlist
-    "negative": "37i9dQZF1DX3YSRoSdA634"    # Life Sucks playlist
+# Dictionary mapping moods to Spotify genres
+MOOD_GENRES = {
+    "happy": "happy,feel-good,pop",
+    "sad": "sad,emo,blues",
+    "angry": "metal,hard-rock,punk", 
+    "relaxed": "chill,ambient,acoustic",
+    "energetic": "dance,electronic,workout",
+    "romantic": "romance,r-n-b,soul",
+    "focused": "focus,study,instrumental",
+    "nostalgic": "oldies,90s,80s"
 }
 
 @app.route('/')
@@ -68,176 +60,122 @@ def get_answer():
     answer = random.choice(RESPONSES)
     return jsonify({'answer': answer})
 
-# Spotify Authentication Routes
-@app.route('/spotify_auth')
-def spotify_auth():
-    # Generate a random state value for security
-    state = str(uuid.uuid4())
-    session['spotify_auth_state'] = state
+@app.route('/get_song', methods=['POST'])
+def get_song():
+    data = request.json
+    mood = data.get('mood', '').lower()
     
-    # Parameters for authorization
-    auth_params = {
+    # Check if the user is authenticated with Spotify
+    if 'access_token' not in session:
+        return jsonify({'error': 'Not authenticated with Spotify', 'auth_url': get_spotify_auth_url()})
+    
+    # Get genres based on mood
+    genres = MOOD_GENRES.get(mood, "pop")
+    
+    # Call Spotify API to get recommendations
+    try:
+        song = get_spotify_recommendation(genres)
+        return jsonify({'song': song})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/spotify-auth')
+def spotify_auth():
+    auth_url = get_spotify_auth_url()
+    return jsonify({'auth_url': auth_url})
+
+@app.route('/spotify-callback')
+def spotify_callback():
+    code = request.args.get('code')
+    
+    if code:
+        # Exchange code for access token
+        try:
+            token_data = get_spotify_token(code)
+            session['access_token'] = token_data['access_token']
+            session['refresh_token'] = token_data.get('refresh_token')
+            session['expires_in'] = token_data.get('expires_in')
+            return redirect(url_for('index', spotify_connected='true'))
+        except Exception as e:
+            return redirect(url_for('index', spotify_error=str(e)))
+    
+    return redirect(url_for('index', spotify_error='Authorization failed'))
+
+def get_spotify_auth_url():
+    """Generate Spotify authorization URL"""
+    params = {
         'client_id': SPOTIFY_CLIENT_ID,
         'response_type': 'code',
         'redirect_uri': SPOTIFY_REDIRECT_URI,
-        'state': state,
-        'scope': 'user-read-private user-read-email user-modify-playback-state user-read-playback-state'
+        'scope': 'user-read-private user-read-email',
     }
     
-    # Construct auth URL with parameters
-    auth_url = 'https://accounts.spotify.com/authorize?' + '&'.join([f"{key}={val}" for key, val in auth_params.items()])
-    return jsonify({'auth_url': auth_url})
+    auth_url = 'https://accounts.spotify.com/authorize?'
+    auth_url += urllib.parse.urlencode(params)
+    return auth_url
 
-@app.route('/callback')
-def callback():
-    # Check state to prevent CSRF attacks
-    if request.args.get('state') != session.get('spotify_auth_state'):
-        return redirect('/')
+def get_spotify_token(code):
+    """Exchange authorization code for access token"""
+    token_url = 'https://accounts.spotify.com/api/token'
     
-    # Exchange authorization code for access token
-    if 'code' in request.args:
-        auth_code = request.args.get('code')
-        
-        token_data = {
-            'grant_type': 'authorization_code',
-            'code': auth_code,
-            'redirect_uri': SPOTIFY_REDIRECT_URI,
-            'client_id': SPOTIFY_CLIENT_ID,
-            'client_secret': SPOTIFY_CLIENT_SECRET
-        }
-        
-        response = requests.post('https://accounts.spotify.com/api/token', data=token_data)
-        
-        if response.status_code == 200:
-            token_info = response.json()
-            session['spotify_token'] = token_info.get('access_token')
-            session['spotify_refresh_token'] = token_info.get('refresh_token')
-            session['spotify_token_expiry'] = token_info.get('expires_in')
-            
-            # Get user profile information
-            user_response = requests.get(
-                f"{SPOTIFY_API_BASE}/me",
-                headers={
-                    'Authorization': f"Bearer {session['spotify_token']}"
-                }
-            )
-            
-            if user_response.status_code == 200:
-                user_info = user_response.json()
-                session['spotify_user_name'] = user_info.get('display_name', 'Spotify User')
-                session['spotify_user_id'] = user_info.get('id')
+    # Encode client ID and secret for Basic Auth
+    auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
     
-    return redirect('/')
+    headers = {
+        'Authorization': f'Basic {auth_header}',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    data = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': SPOTIFY_REDIRECT_URI
+    }
+    
+    response = requests.post(token_url, headers=headers, data=data)
+    response.raise_for_status()
+    return response.json()
 
-@app.route('/spotify_status')
-def spotify_status():
-    if 'spotify_token' in session:
-        return jsonify({
-            'connected': True,
-            'user_name': session.get('spotify_user_name', 'Spotify User')
-        })
-    else:
-        return jsonify({'connected': False})
-
-@app.route('/spotify_disconnect', methods=['POST'])
-def spotify_disconnect():
-    # Clear Spotify session data
-    session.pop('spotify_token', None)
-    session.pop('spotify_refresh_token', None)
-    session.pop('spotify_token_expiry', None)
-    session.pop('spotify_user_name', None)
-    session.pop('spotify_user_id', None)
+def get_spotify_recommendation(genres):
+    """Get song recommendation from Spotify based on genres"""
+    if 'access_token' not in session:
+        raise Exception("Not authenticated with Spotify")
     
-    return jsonify({'success': True})
-
-@app.route('/play_spotify_track', methods=['POST'])
-def play_spotify_track():
-    if 'spotify_token' not in session:
-        return jsonify({
-            'success': False,
-            'message': 'Not connected to Spotify.'
-        })
+    recommendations_url = 'https://api.spotify.com/v1/recommendations'
     
-    # Get the 8 Ball answer from the request
-    answer_text = request.json.get('answer', '')
+    headers = {
+        'Authorization': f'Bearer {session["access_token"]}',
+        'Content-Type': 'application/json'
+    }
     
-    # Determine the mood based on the answer
-    mood = "uncertain"  # Default mood
-    for key_word in answer_text.lower():
-        if any(response.lower() in answer_text.lower() for response in MOOD_MAPPING["positive"]):
-            mood = "positive"
-            break
-        elif any(response.lower() in answer_text.lower() for response in MOOD_MAPPING["negative"]):
-            mood = "negative"
-            break
+    params = {
+        'seed_genres': genres,
+        'limit': 1
+    }
     
-    # Get a track from the corresponding playlist
-    playlist_id = SPOTIFY_PLAYLISTS[mood]
+    response = requests.get(recommendations_url, headers=headers, params=params)
     
-    # Check if user has an active device
-    devices_response = requests.get(
-        f"{SPOTIFY_API_BASE}/me/player/devices",
-        headers={
-            'Authorization': f"Bearer {session['spotify_token']}"
-        }
-    )
+    # Check if token expired
+    if response.status_code == 401:
+        # Could implement token refresh here
+        raise Exception("Spotify session expired. Please reconnect.")
     
-    if devices_response.status_code != 200 or not devices_response.json().get('devices'):
-        return jsonify({
-            'success': False,
-            'message': 'No active Spotify devices found. Please open Spotify on a device first.'
-        })
+    response.raise_for_status()
+    data = response.json()
     
-    # Get tracks from the playlist
-    playlist_response = requests.get(
-        f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/tracks",
-        params={
-            'limit': 50  # Get up to 50 tracks
-        },
-        headers={
-            'Authorization': f"Bearer {session['spotify_token']}"
-        }
-    )
+    if not data['tracks']:
+        return {"name": "No song found", "artist": "", "url": ""}
     
-    if playlist_response.status_code != 200:
-        return jsonify({
-            'success': False,
-            'message': 'Could not get tracks from the playlist.'
-        })
+    track = data['tracks'][0]
+    song_info = {
+        "name": track['name'],
+        "artist": track['artists'][0]['name'],
+        "url": track['external_urls']['spotify'],
+        "preview_url": track['preview_url'],
+        "album_image": track['album']['images'][0]['url'] if track['album']['images'] else "",
+    }
     
-    tracks = playlist_response.json().get('items', [])
-    if not tracks:
-        return jsonify({
-            'success': False,
-            'message': 'No tracks found in the playlist.'
-        })
-    
-    # Select a random track
-    track = random.choice(tracks)['track']
-    track_uri = track['uri']
-    
-    # Play the track
-    play_response = requests.put(
-        f"{SPOTIFY_API_BASE}/me/player/play",
-        json={
-            'uris': [track_uri]
-        },
-        headers={
-            'Authorization': f"Bearer {session['spotify_token']}"
-        }
-    )
-    
-    if play_response.status_code in [200, 204]:
-        return jsonify({
-            'success': True,
-            'track_name': track['name'],
-            'artist_name': track['artists'][0]['name']
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'message': 'Could not play the track. Make sure Spotify is open and active.'
-        })
+    return song_info
 
 # Keep the existing routes for backwards compatibility
 @app.route('/increment', methods=['POST'])
