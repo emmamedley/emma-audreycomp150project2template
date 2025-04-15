@@ -26,7 +26,7 @@ RESPONSES = [
     "forecast = 'negative'  # Outlook not so good.",
     "confidence = 0.1  # Very doubtful."
 ]
-]
+
 
 @app.route('/')
 def index():
