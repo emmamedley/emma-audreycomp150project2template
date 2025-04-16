@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const spotifyConnectBtn = document.getElementById('spotifyConnectBtn');
   const spotifyStatus = document.getElementById('spotifyStatus');
   const songRecommendation = document.getElementById('songRecommendation');
-  
+
   // Star explosion animation setup
   const canvas = document.getElementById('explosionCanvas');
   const ctx = canvas.getContext('2d');
