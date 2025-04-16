@@ -12,7 +12,7 @@ app.secret_key = "your_secret_key_here"
 # Spotify API credentials - you'll need to replace these with your own
 SPOTIFY_CLIENT_ID = "c0f94698a04a46f99e22cda3b8f64029"
 SPOTIFY_CLIENT_SECRET = "e3058ec934944a559421b5d6f72f9ede"
-SPOTIFY_REDIRECT_URI = "http://localhost:80/spotify-callback"
+SPOTIFY_REDIRECT_URI = "https://yourdomain.com/spotify-callback"
 
 # List of Magic 8 Ball responses as Python code
 RESPONSES = [
