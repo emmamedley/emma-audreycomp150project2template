@@ -299,6 +299,56 @@ def spotify_callback():
             return redirect(url_for('index', spotify_error=str(e)))
     
     return redirect(url_for('index', spotify_error='Authorization failed'))
+# This function to main.py to handle token refresh
+
+def refresh_token_if_expired():
+    """Check if token is expired and refresh if needed"""
+    if 'access_token' not in session:
+        return False
+    
+    if 'token_expiry' not in session or 'refresh_token' not in session:
+        return False
+    
+    # Check if token is expired
+    import time
+    current_time = int(time.time())
+    
+    if current_time >= session.get('token_expiry', 0):
+        try:
+            # Token is expired, refresh it
+            token_url = 'https://accounts.spotify.com/api/token'
+            
+            # Encode client ID and secret for Basic Auth
+            auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
+            
+            headers = {
+                'Authorization': f'Basic {auth_header}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+            
+            data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': session['refresh_token']
+            }
+            
+            response = requests.post(token_url, headers=headers, data=data)
+            response.raise_for_status()
+            token_data = response.json()
+            
+            # Update session with new token
+            session['access_token'] = token_data['access_token']
+            if 'refresh_token' in token_data:
+                session['refresh_token'] = token_data['refresh_token']
+            
+            # Set token expiry time
+            session['token_expiry'] = int(time.time()) + token_data.get('expires_in', 3600)
+            
+            return True
+        except Exception as e:
+            print(f"Error refreshing token: {str(e)}")
+            return False
+    
+    return True
 
 # Update the get_spotify_auth_url function in main.py
 
