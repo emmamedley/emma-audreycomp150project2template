@@ -68,7 +68,7 @@
   to { opacity: 1; }
 }
 
-/* New styles for Spotify integration */
+/* Mood input styles */
 .mood-input {
   margin: 20px 0;
 }
@@ -83,6 +83,59 @@
   font-size: 16px;
   border-radius: 4px;
   border: 1px solid #ccc;
+}
+
+/* New custom adjective input styles */
+.custom-mood-input {
+  margin: 15px 0 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.custom-mood-input label {
+  font-size: 18px;
+  margin-right: 10px;
+}
+
+#customAdjective {
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  margin-right: 10px;
+  width: 200px;
+}
+
+.custom-mood-button {
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.custom-mood-button:hover {
+  background-color: #666;
+  transform: scale(1.05);
+}
+
+/* For smaller screens */
+@media (max-width: 600px) {
+  .custom-mood-input {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .custom-mood-input label,
+  #customAdjective,
+  .custom-mood-button {
+    margin: 5px 0;
+  }
 }
 
 .spotify-section {
