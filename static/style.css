@@ -396,3 +396,27 @@ body {
   background-position: 0 0, 40px 60px, 130px 270px, 70px 100px;
   color: #fff; 
 }
+
+#ballEight {
+  display: inline-block;
+  transition: transform 0.5s ease-in-out;
+}
+
+@keyframes pulseRotate {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.animating-eight {
+  animation: pulseRotate 2s infinite;
+}
