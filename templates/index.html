@@ -6,35 +6,21 @@
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 <body>
-  <!-- Add this canvas element for the star explosion effect -->
+  <!-- Canvas for the star explosion effect -->
   <canvas id="explosionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
 
   <div class="container">
     <h1>Magic 8 Ball - Mood Music</h1>
-    <p>Enter your mood, then shake the ball for a song recommendation!</p>
+    <p>Shake the Magic 8 Ball to discover your mood and get a song recommendation!</p>
     
-    <div class="mood-input">
-      <label for="moodSelector">How are you feeling?</label>
-      <select id="moodSelector">
-        <option value="happy">Happy</option>
-        <option value="sad">Sad</option>
-        <option value="angry">Angry</option>
-        <option value="relaxed">Relaxed</option>
-        <option value="energetic">Energetic</option>
-        <option value="romantic">Romantic</option>
-        <option value="focused">Focused</option>
-        <option value="nostalgic">Nostalgic</option>
-      </select>
-    </div>
-    
-    <!-- New custom adjective input section -->
+    <!-- Custom adjective input section -->
     <div class="custom-mood-input">
-      <label for="customAdjective">Or enter your own adjective:</label>
+      <label for="customAdjective">Or enter your own mood:</label>
       <input type="text" id="customAdjective" placeholder="e.g., dreamy, melancholic, upbeat">
       <button id="customMoodBtn" class="custom-mood-button">Get Song</button>
     </div>
     
-    <!-- New personalization toggle -->
+    <!-- Personalization toggle -->
     <div class="personalization-toggle">
       <input type="checkbox" id="personalizedToggle" checked>
       <label for="personalizedToggle">Personalize recommendations based on my listening history</label>
@@ -51,7 +37,11 @@
     </div>
     
     <div class="answer-container">
-      <p id="answer">Shake the Magic 8 Ball for a song recommendation...</p>
+      <p id="answer">Shake the Magic 8 Ball for a mood and song recommendation...</p>
+    </div>
+    
+    <div id="moodResult" class="mood-result">
+      <!-- Random mood will appear here -->
     </div>
     
     <div id="songRecommendation" class="song-recommendation">
