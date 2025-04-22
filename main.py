@@ -450,13 +450,16 @@ def spotify_callback():
             token_data = get_spotify_token(code)
             session['access_token'] = token_data['access_token']
             session['refresh_token'] = token_data.get('refresh_token')
-            session['expires_in'] = token_data.get('expires_in')
+            
+        
+            import time
+            session['token_expiry'] = int(time.time()) + token_data.get('expires_in', 3600)
+            
             return redirect(url_for('index', spotify_connected='true'))
         except Exception as e:
             return redirect(url_for('index', spotify_error=str(e)))
     
     return redirect(url_for('index', spotify_error='Authorization failed'))
-# This function to main.py to handle token refresh
 
 def refresh_token_if_expired():
     """Check if token is expired and refresh if needed"""
