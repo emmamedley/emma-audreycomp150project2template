@@ -50,6 +50,85 @@ MOOD_GENRES = {
     "nostalgic": "oldies,90s,80s"
 }
 
+# Expanded mood-genre mappings to handle more adjectives
+EXPANDED_MOOD_MAPPING = {
+    # Happy-related
+    "joyful": "happy,feel-good,pop",
+    "cheerful": "happy,feel-good,pop",
+    "excited": "happy,edm,pop",
+    "upbeat": "happy,dance,pop",
+    "elated": "happy,uplifting,pop",
+    "ecstatic": "happy,edm,festival",
+    
+    # Sad-related
+    "melancholic": "sad,indie,blues",
+    "gloomy": "sad,dark,blues",
+    "depressed": "sad,emo,indie",
+    "sorrowful": "sad,emotional,piano",
+    "miserable": "sad,blues,emotional",
+    "heartbroken": "sad,breakup,emotional",
+    
+    # Angry-related
+    "furious": "metal,hardcore,punk",
+    "irritated": "rock,punk,alt-rock",
+    "frustrated": "rock,grunge,alt-rock",
+    "outraged": "metal,hardcore,rock",
+    "mad": "rock,alt-rock,punk",
+    
+    # Relaxed-related
+    "calm": "chill,ambient,acoustic",
+    "peaceful": "ambient,meditation,acoustic",
+    "tranquil": "ambient,piano,classical",
+    "serene": "ambient,instrumental,classical",
+    "mellow": "chill,lofi,acoustic",
+    
+    # Energetic-related
+    "lively": "dance,electronic,pop",
+    "vibrant": "dance,pop,edm",
+    "dynamic": "electronic,edm,house",
+    "pumped": "workout,electronic,hip-hop",
+    "active": "workout,electronic,rock",
+    
+    # Romantic-related
+    "loving": "romance,r-n-b,soul",
+    "passionate": "romance,latin,r-n-b",
+    "affectionate": "romance,acoustic,soft-rock",
+    "tender": "romance,piano,acoustic",
+    "intimate": "romance,jazz,soul",
+    
+    # Focused-related
+    "concentrated": "focus,study,instrumental",
+    "determined": "focus,motivational,instrumental",
+    "dedicated": "focus,instrumental,classical",
+    "attentive": "focus,ambient,instrumental",
+    
+    # Nostalgic-related
+    "sentimental": "oldies,90s,80s",
+    "reminiscent": "oldies,70s,60s",
+    "retro": "80s,disco,synthwave",
+    "vintage": "60s,70s,oldies",
+    
+    # More unique moods
+    "dreamy": "dream-pop,ambient,indie",
+    "mysterious": "dark-ambient,soundtrack,electronic",
+    "whimsical": "indie-pop,folk,quirky",
+    "confident": "hip-hop,pop,motivational",
+    "anxious": "electronic,experimental,indie",
+    "hopeful": "indie,uplifting,folk",
+    "rebellious": "punk,rock,grunge",
+    "spiritual": "meditation,new-age,world",
+    "playful": "indie-pop,quirky,children",
+    "bored": "lo-fi,chill,indie",
+    "creative": "indie,experimental,jazz",
+    "ethereal": "ambient,dream-pop,new-age",
+    "sophisticated": "jazz,classical,lounge",
+    "epic": "soundtrack,orchestral,cinematic",
+    "groovy": "funk,disco,soul",
+    "tropical": "reggae,dancehall,tropical-house",
+    "winter": "acoustic,piano,ambient",
+    "summer": "tropical-house,pop,reggae"
+}
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -69,8 +148,9 @@ def get_song():
     if 'access_token' not in session:
         return jsonify({'error': 'Not authenticated with Spotify', 'auth_url': get_spotify_auth_url()})
     
-    # Get genres based on mood
-    genres = MOOD_GENRES.get(mood, "pop")
+    # Get genres based on mood - first check expanded mapping, then default mapping, 
+    # then use the mood itself as a genre search term
+    genres = EXPANDED_MOOD_MAPPING.get(mood, MOOD_GENRES.get(mood, mood))
     
     # Call Spotify API to get recommendations
     try:
@@ -111,71 +191,5 @@ def get_spotify_auth_url():
     }
     
     auth_url = 'https://accounts.spotify.com/authorize?'
-    auth_url += urllib.parse.urlencode(params)
-    return auth_url
-
-def get_spotify_token(code):
-    """Exchange authorization code for access token"""
-    token_url = 'https://accounts.spotify.com/api/token'
-    
-    # Encode client ID and secret for Basic Auth
-    auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
-    
-    headers = {
-        'Authorization': f'Basic {auth_header}',
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    
-    data = {
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': SPOTIFY_REDIRECT_URI
-    }
-    
-    response = requests.post(token_url, headers=headers, data=data)
-    response.raise_for_status()
-    return response.json()
-
-def get_spotify_recommendation(genres):
-    """Get song recommendation from Spotify based on genres"""
-    if 'access_token' not in session:
-        raise Exception("Not authenticated with Spotify")
-    
-    recommendations_url = 'https://api.spotify.com/v1/recommendations'
-    
-    headers = {
-        'Authorization': f'Bearer {session["access_token"]}',
-        'Content-Type': 'application/json'
-    }
-    
-    params = {
-        'seed_genres': genres,
-        'limit': 1
-    }
-    
-    response = requests.get(recommendations_url, headers=headers, params=params)
-    
-    # Check if token expired
-    if response.status_code == 401:
-        # Could implement token refresh here
-        raise Exception("Spotify session expired. Please reconnect.")
-    
-    response.raise_for_status()
-    data = response.json()
-    
-    if not data['tracks']:
-        return {"name": "No song found", "artist": "", "url": ""}
-    
-    track = data['tracks'][0]
-    song_info = {
-        "name": track['name'],
-        "artist": track['artists'][0]['name'],
-        "url": track['external_urls']['spotify'],
-        "preview_url": track['preview_url'],
-        "album_image": track['album']['images'][0]['url'] if track['album']['images'] else "",
-    }
-    
-    return song_info
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    auth_url += urllib.parse.urlencode(params
+                                       

@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const magicBall = document.getElementById('magicBall');
   const answerElement = document.getElementById('answer');
   const moodSelector = document.getElementById('moodSelector');
+  const customAdjective = document.getElementById('customAdjective');
+  const customMoodBtn = document.getElementById('customMoodBtn');
   const spotifyConnectBtn = document.getElementById('spotifyConnectBtn');
   const spotifyStatus = document.getElementById('spotifyStatus');
   const songRecommendation = document.getElementById('songRecommendation');
@@ -80,6 +82,72 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // Function to get song recommendation based on mood
+  function getSongRecommendation(mood) {
+    // Reset the answer opacity
+    answerElement.style.opacity = 0;
+    
+    // Hide any previous song recommendation
+    songRecommendation.classList.remove('active');
+    
+    // Get song recommendation from server
+    axios.post('/get_song', { mood: mood })
+      .then(function(response) {
+        if (response.data.error) {
+          // Handle error (like not authenticated)
+          answerElement.textContent = "You need to connect to Spotify first!";
+          answerElement.style.opacity = 1;
+          
+          if (response.data.auth_url) {
+            // Prompt to connect
+            spotifyStatus.innerHTML = 'Please <a href="' + response.data.auth_url + '">connect to Spotify</a> to get song recommendations';
+            spotifyStatus.style.color = '#ff9800';
+          }
+        } else if (response.data.song) {
+          // Display the song recommendation
+          const song = response.data.song;
+          
+          // Show the text answer
+          answerElement.textContent = `Based on your "${mood}" mood, here's a song for you:`;
+          answerElement.style.opacity = 1;
+          answerElement.classList.add('fade-in');
+          
+          // Build the song recommendation HTML
+          let songHTML = `
+            <img src="${song.album_image}" alt="${song.name} album cover" class="song-cover">
+            <div class="song-title">${song.name}</div>
+            <div class="song-artist">by ${song.artist}</div>
+            <a href="${song.url}" target="_blank" class="spotify-play-button">
+              Play on Spotify
+            </a>
+          `;
+          
+          // Add audio preview if available
+          if (song.preview_url) {
+            songHTML += `
+              <div class="preview-player" style="margin-top: 15px;">
+                <audio controls src="${song.preview_url}"></audio>
+              </div>
+            `;
+          }
+          
+          // Display the song recommendation
+          songRecommendation.innerHTML = songHTML;
+          songRecommendation.classList.add('active');
+          
+          // Remove the animation class after it completes
+          setTimeout(() => {
+            answerElement.classList.remove('fade-in');
+          }, 1500);
+        }
+      })
+      .catch(function(error) {
+        console.log(error);
+        answerElement.textContent = "Error getting your song recommendation. Try again.";
+        answerElement.style.opacity = 1;
+      });
+  }
+  
   // Check if we've just returned from Spotify auth
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('spotify_connected') && urlParams.get('spotify_connected') === 'true') {
@@ -122,12 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Visual feedback for the click
     magicBall.style.transform = 'scale(0.95)';
     
-    // Reset the answer opacity
-    answerElement.style.opacity = 0;
-    
-    // Hide any previous song recommendation
-    songRecommendation.classList.remove('active');
-    
     // Calculate the 8 ball position for explosion center
     const ballRect = magicBall.getBoundingClientRect();
     const explosionX = ballRect.left + ballRect.width / 2;
@@ -150,115 +212,55 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
           magicBall.style.transform = 'scale(1)';
           
-          // Get song recommendation from server
-          axios.post('/get_song', { mood: mood })
-            .then(function(response) {
-              if (response.data.error) {
-                // Handle error (like not authenticated)
-                answerElement.textContent = "You need to connect to Spotify first!";
-                answerElement.style.opacity = 1;
-                
-                if (response.data.auth_url) {
-                  // Prompt to connect
-                  spotifyStatus.innerHTML = 'Please <a href="' + response.data.auth_url + '">connect to Spotify</a> to get song recommendations';
-                  spotifyStatus.style.color = '#ff9800';
-                }
-              } else if (response.data.song) {
-                // Display the song recommendation
-                const song = response.data.song;
-                
-                // Show the text answer
-                answerElement.textContent = `Based on your ${mood} mood, here's a song for you:`;
-                answerElement.style.opacity = 1;
-                answerElement.classList.add('fade-in');
-                
-                // Build the song recommendation HTML
-                let songHTML = `
-                  <img src="${song.album_image}" alt="${song.name} album cover" class="song-cover">
-                  <div class="song-title">${song.name}</div>
-                  <div class="song-artist">by ${song.artist}</div>
-                  <a href="${song.url}" target="_blank" class="spotify-play-button">
-                    Play on Spotify
-                  </a>
-                `;
-                
-                // Add audio preview if available
-                if (song.preview_url) {
-                  songHTML += `
-                    <div class="preview-player" style="margin-top: 15px;">
-                      <audio controls src="${song.preview_url}"></audio>
-                    </div>
-                  `;
-                }
-                
-                // Display the song recommendation
-                songRecommendation.innerHTML = songHTML;
-                songRecommendation.classList.add('active');
-                
-                // Remove the animation class after it completes
-                setTimeout(() => {
-                  answerElement.classList.remove('fade-in');
-                }, 1500);
-              }
-            })
-            .catch(function(error) {
-              console.log(error);
-              answerElement.textContent = "Error getting your song recommendation. Try again.";
-              answerElement.style.opacity = 1;
-            });
+          // Get song recommendation
+          getSongRecommendation(mood);
         }, 500);
       }
     }, 100);
   });
-});
 
-
-// Ensure the fade-in class is added and removed correctly
-function showAnswerWithAnimation(text) {
-  answerElement.textContent = text;
-  answerElement.style.opacity = 1;
-  answerElement.classList.add('fade-in');
-  
-  // Remove the animation class after it completes
-  setTimeout(() => {
-    answerElement.classList.remove('fade-in');
-  }, 1500);
-}
-
-// Improve the shake animation by using CSS animations instead
-function improvedShakeAnimation() {
-  // Add a CSS class for shaking instead of using JS for the animation
-  magicBall.classList.add('shaking');
-  
-  // Remove the class after animation completes
-  setTimeout(() => {
-    magicBall.classList.remove('shaking');
-    magicBall.style.transform = 'scale(1)';
-    // Get answer and song after shaking completes
-    getAnswerAndSong();
-  }, 800);
-}
-
-// Function to get both answer and song
-function getAnswerAndSong() {
-  // Get random answer
-  axios.post('/get_answer')
-    .then(function(response) {
-      showAnswerWithAnimation(response.data.answer);
-    })
-    .catch(function(error) {
-      console.error('Error getting answer:', error);
-    });
+  // Custom mood button click handler
+  customMoodBtn.addEventListener('click', function() {
+    const customMood = customAdjective.value.trim();
     
-  // Get song recommendation based on mood
-  const mood = moodSelector.value;
-  axios.post('/get_song', { mood: mood })
-    .then(function(response) {
-      // Your existing song recommendation code...
-    })
-    .catch(function(error) {
-      console.log(error);
-      answerElement.textContent = "Error getting your song recommendation. Try again.";
+    if (customMood) {
+      // Small button animation
+      customMoodBtn.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        customMoodBtn.style.transform = 'scale(1)';
+      }, 200);
+      
+      // Create a small explosion near the button
+      const btnRect = customMoodBtn.getBoundingClientRect();
+      const explosionX = btnRect.left + btnRect.width / 2;
+      const explosionY = btnRect.top + btnRect.height / 2;
+      
+      // Create star explosion with fewer stars
+      const starCount = 30;
+      for (let i = 0; i < starCount; i++) {
+        stars.push(new Star(explosionX, explosionY));
+      }
+      animate();
+      
+      // Get song recommendation
+      getSongRecommendation(customMood);
+    } else {
+      // Provide feedback if input is empty
+      answerElement.textContent = "Please enter an adjective first!";
       answerElement.style.opacity = 1;
-    });
-}
+      
+      // Shake the input field to indicate it needs attention
+      customAdjective.style.border = '1px solid red';
+      setTimeout(() => {
+        customAdjective.style.border = '1px solid #ccc';
+      }, 2000);
+    }
+  });
+  
+  // Enter key press in custom adjective input
+  customAdjective.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      customMoodBtn.click();
+    }
+  });
+});
