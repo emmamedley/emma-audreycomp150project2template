@@ -139,22 +139,27 @@ def get_answer():
     answer = random.choice(RESPONSES)
     return jsonify({'answer': answer})
 
+# Update the get_song route in main.py
+
 @app.route('/get_song', methods=['POST'])
 def get_song():
     data = request.json
     mood = data.get('mood', '').lower()
+    use_personalized = data.get('personalized', True)  # Default to personalized recommendations
     
     # Check if the user is authenticated with Spotify
     if 'access_token' not in session:
         return jsonify({'error': 'Not authenticated with Spotify', 'auth_url': get_spotify_auth_url()})
     
-    # Get genres based on mood - first check expanded mapping, then default mapping, 
-    # then use the mood itself as a genre search term
-    genres = EXPANDED_MOOD_MAPPING.get(mood, MOOD_GENRES.get(mood, mood))
-    
     # Call Spotify API to get recommendations
     try:
-        song = get_spotify_recommendation(genres)
+        if use_personalized:
+            song = get_personalized_recommendation(mood)
+        else:
+            # Fall back to genre-based if personalization is disabled
+            genres = EXPANDED_MOOD_MAPPING.get(mood, MOOD_GENRES.get(mood, mood))
+            song = get_spotify_recommendation(genres)
+            
         return jsonify({'song': song})
     except Exception as e:
         return jsonify({'error': str(e)})
