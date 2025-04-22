@@ -8,44 +8,33 @@ document.addEventListener('DOMContentLoaded', function() {
   const spotifyStatus = document.getElementById('spotifyStatus');
   const songRecommendation = document.getElementById('songRecommendation');
 
-    const createStars = () => {
-      const colors = ['pink', 'yellow', 'blue'];
-      const numStars = 100;
+  const createStars = () => {
+    const colors = ['pink', 'yellow', 'blue'];
+    const numStars = 100;
+    
+    for (let i = 0; i < numStars; i++) {
+      const star = document.createElement('div');
+      star.classList.add('star');
+      star.classList.add(colors[Math.floor(Math.random() * colors.length)]);
       
-      for (let i = 0; i < numStars; i++) {
-        const star = document.createElement('div');
-        star.classList.add('star');
-        star.classList.add(colors[Math.floor(Math.random() * colors.length)]);
-        
+      star.style.left = `${Math.random() * 100}vw`;
+      star.style.top = `${Math.random() * 100}vh`;
+      
+      const size = Math.random() * 4 + 1;
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      
+      star.style.animationDelay = `${Math.random() * 4}s`;
+      
+      document.body.appendChild(star);
+    }
+  };
   
-        star.style.left = `${Math.random() * 100}vw`;
-        star.style.top = `${Math.random() * 100}vh`;
-        
-      
-        const size = Math.random() * 4 + 1;
-        star.style.width = `${size}px`;
-        star.style.height = `${size}px`;
-        
-      
-        star.style.animationDelay = `${Math.random() * 4}s`;
-        
-        document.body.appendChild(star);
-      }
-    };
-    
-    createStars();
-    
-
-    const magicBall = document.getElementById('magicBall');
-    const answerElement = document.getElementById('answer');
-   
-  });
-
-
+  createStars();
+  
   const canvas = document.getElementById('explosionCanvas');
   const ctx = canvas.getContext('2d');
   let stars = [];
-
 
   function resizeCanvas() {
     canvas.width = window.innerWidth;
@@ -53,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-
 
   class Star {
     constructor(x, y) {
@@ -63,8 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
       this.speedX = Math.random() * 6 - 3;
       this.speedY = Math.random() * 6 - 3;
       this.color = `hsl(${Math.random() * 60 + 200}, 100%, 50%)`;
-      this.life = 1; // Full life
-      this.decay = Math.random() * 0.02 + 0.02; // Rate of fading
+      this.life = 1; 
+      this.decay = Math.random() * 0.02 + 0.02; 
     }
     
     update() {
@@ -72,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
       this.y += this.speedY;
       this.life -= this.decay;
       
-    
       this.speedY += 0.05;
     }
     
@@ -86,15 +73,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-
   function createExplosion(x, y) {
-    const starCount = 100; // Number of stars in explosion
+    const starCount = 100; 
     for (let i = 0; i < starCount; i++) {
       stars.push(new Star(x, y));
     }
   }
 
-  // Animation loop
+
   function animate() {
     if (stars.length > 0) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -116,27 +102,27 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function getRandomMood() {
-    // Reset UI elements
+
     answerElement.style.opacity = 0;
     moodResultElement.innerHTML = "";
     moodResultElement.classList.remove('active');
     songRecommendation.classList.remove('active');
     
-    // Get random mood from server
+   
     axios.get('/get_random_mood')
       .then(function(response) {
         if (response.data.mood) {
           const mood = response.data.mood;
           
-          // Show the mood result
+         
           moodResultElement.textContent = `Your mood: ${mood.charAt(0).toUpperCase() + mood.slice(1)}`;
           moodResultElement.classList.add('active');
           
-          // Update the answer text
+          
           answerElement.textContent = "Now getting a song recommendation for your mood...";
           answerElement.style.opacity = 1;
           
-          // Get song recommendation for this mood
+          
           getSongRecommendation(mood);
         }
       })
@@ -148,36 +134,36 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function getSongRecommendation(mood) {
-    // Get personalization preference
+   
     const usePersonalized = document.getElementById('personalizedToggle').checked;
     
-    // Get song recommendation from server
+   
     axios.post('/get_song', { 
       mood: mood,
       personalized: usePersonalized
     })
       .then(function(response) {
         if (response.data.error) {
-          // Handle error (like not authenticated)
+         
           answerElement.textContent = "You need to connect to Spotify first!";
           answerElement.style.opacity = 1;
           
           if (response.data.auth_url) {
-            // Prompt to connect
+            
             spotifyStatus.innerHTML = 'Please <a href="' + response.data.auth_url + '">connect to Spotify</a> to get song recommendations';
             spotifyStatus.style.color = '#ff9800';
           }
         } else if (response.data.song) {
-          // Display the song recommendation
+          
           const song = response.data.song;
           
-          // Show the text answer
+          
           const personalizedText = usePersonalized ? " (personalized)" : "";
           answerElement.textContent = `Based on your "${mood}" mood${personalizedText}, here's a song for you:`;
           answerElement.style.opacity = 1;
           answerElement.classList.add('fade-in');
           
-          // Build the song recommendation HTML
+          
           let songHTML = `
             <img src="${song.album_image}" alt="${song.name} album cover" class="song-cover">
             <div class="song-title">${song.name}</div>
@@ -187,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </a>
           `;
           
-          // Add audio preview if available
+          
           if (song.preview_url) {
             songHTML += `
               <div class="preview-player" style="margin-top: 15px;">
@@ -196,11 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
           }
           
-          // Display the song recommendation
+        
           songRecommendation.innerHTML = songHTML;
           songRecommendation.classList.add('active');
           
-          // Remove the animation class after it completes
+          
           setTimeout(() => {
             answerElement.classList.remove('fade-in');
           }, 1500);
@@ -213,30 +199,30 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
-  // Check if we've just returned from Spotify auth
+
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('spotify_connected') && urlParams.get('spotify_connected') === 'true') {
     spotifyStatus.textContent = 'Connected to Spotify!';
     spotifyStatus.style.color = '#1DB954';
     spotifyConnectBtn.textContent = 'Reconnect to Spotify';
     
-    // Clean the URL without refreshing the page
+
     window.history.replaceState({}, document.title, '/');
   } else if (urlParams.has('spotify_error')) {
     spotifyStatus.textContent = 'Error connecting to Spotify: ' + urlParams.get('spotify_error');
     spotifyStatus.style.color = 'red';
     
-    // Clean the URL without refreshing the page
+  
     window.history.replaceState({}, document.title, '/');
   }
   
-  // Connect to Spotify button
+
   spotifyConnectBtn.addEventListener('click', function() {
-    // Get the authentication URL from the server
+
     axios.get('/spotify-auth')
       .then(function(response) {
         if (response.data.auth_url) {
-          // Redirect to Spotify authorization page
+   
           window.location.href = response.data.auth_url;
         }
       })
@@ -247,21 +233,21 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   });
   
-  // Magic 8 Ball click handler
+  
   magicBall.addEventListener('click', function() {
-    // Visual feedback for the click
+    
     magicBall.style.transform = 'scale(0.95)';
     
-    // Calculate the 8 ball position for explosion center
+    
     const ballRect = magicBall.getBoundingClientRect();
     const explosionX = ballRect.left + ballRect.width / 2;
     const explosionY = ballRect.top + ballRect.height / 2;
     
-    // Create star explosion
+    
     createExplosion(explosionX, explosionY);
     animate();
     
-    // Shake animation
+  
     let shakeCount = 0;
     const maxShakes = 5;
     const shakeInterval = setInterval(() => {
@@ -270,52 +256,52 @@ document.addEventListener('DOMContentLoaded', function() {
       if (shakeCount >= maxShakes) {
         clearInterval(shakeInterval);
         
-        // Return to normal position after shaking
+        
         setTimeout(() => {
           magicBall.style.transform = 'scale(1)';
           
-          // Get random mood
+          
           getRandomMood();
         }, 500);
       }
     }, 100);
   });
 
-  // Custom mood button click handler
+ 
   customMoodBtn.addEventListener('click', function() {
     const customMood = customAdjective.value.trim();
     
     if (customMood) {
-      // Small button animation
+    
       customMoodBtn.style.transform = 'scale(0.95)';
       setTimeout(() => {
         customMoodBtn.style.transform = 'scale(1)';
       }, 200);
       
-      // Create a small explosion near the button
+    
       const btnRect = customMoodBtn.getBoundingClientRect();
       const explosionX = btnRect.left + btnRect.width / 2;
       const explosionY = btnRect.top + btnRect.height / 2;
       
-      // Create star explosion with fewer stars
+     
       const starCount = 30;
       for (let i = 0; i < starCount; i++) {
         stars.push(new Star(explosionX, explosionY));
       }
       animate();
       
-      // Reset mood result if present
+      
       moodResultElement.innerHTML = "";
       moodResultElement.classList.remove('active');
       
-      // Get song recommendation
+
       getSongRecommendation(customMood);
     } else {
-      // Provide feedback if input is empty
+    
       answerElement.textContent = "Please enter a mood first!";
       answerElement.style.opacity = 1;
       
-      // Shake the input field to indicate it needs attention
+   
       customAdjective.style.border = '1px solid red';
       setTimeout(() => {
         customAdjective.style.border = '1px solid #ccc';
@@ -323,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Enter key press in custom adjective input
+
   customAdjective.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       customMoodBtn.click();
