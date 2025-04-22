@@ -413,7 +413,7 @@ def get_spotify_token(code):
     """Exchange authorization code for access token"""
     token_url = 'https://accounts.spotify.com/api/token'
     
-    # Encode client ID and secret for Basic Auth
+  
     auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
     
     headers = {
@@ -440,16 +440,16 @@ def refresh_token_if_expired():
     if 'token_expiry' not in session or 'refresh_token' not in session:
         return False
     
-    # Check if token is expired
+   
     import time
     current_time = int(time.time())
     
     if current_time >= session.get('token_expiry', 0):
         try:
-            # Token is expired, refresh it
+            
             token_url = 'https://accounts.spotify.com/api/token'
             
-            # Encode client ID and secret for Basic Auth
+            
             auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
             
             headers = {
@@ -466,12 +466,12 @@ def refresh_token_if_expired():
             response.raise_for_status()
             token_data = response.json()
             
-            # Update session with new token
+            
             session['access_token'] = token_data['access_token']
             if 'refresh_token' in token_data:
                 session['refresh_token'] = token_data['refresh_token']
             
-            # Set token expiry time
+          
             session['token_expiry'] = int(time.time()) + token_data.get('expires_in', 3600)
             
             return True
