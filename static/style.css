@@ -329,3 +329,17 @@
   visibility: visible;
   opacity: 1;
 }
+.mood-result {
+  margin: 20px auto;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #1DB954;
+  transition: opacity 0.5s;
+  opacity: 0;
+}
+
+.mood-result.active {
+  opacity: 1;
+  animation: fadeIn 1.5s;
+}
