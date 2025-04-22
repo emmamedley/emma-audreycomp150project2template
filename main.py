@@ -138,6 +138,13 @@ def get_answer():
     answer = random.choice(RESPONSES)
     return jsonify({'answer': answer})
 
+@app.route('/get_random_mood', methods=['GET'])
+def get_random_mood():
+    all_moods = list(MOOD_GENRES.keys()) + list(EXPANDED_MOOD_MAPPING.keys())
+    unique_moods = list(set(all_moods))
+    random_mood = random.choice(unique_moods)
+    return jsonify({'mood': random_mood})
+
 @app.route('/get_song', methods=['POST'])
 def get_song():
     data = request.json
