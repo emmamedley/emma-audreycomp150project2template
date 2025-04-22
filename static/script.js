@@ -235,7 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   
   magicBall.addEventListener('click', function() {
-    
+    document.getElementById('ballEight').classList.add('animating-eight');
+  
+
     magicBall.style.transform = 'scale(0.95)';
     
     
@@ -247,7 +249,23 @@ document.addEventListener('DOMContentLoaded', function() {
     createExplosion(explosionX, explosionY);
     animate();
     
-  
+    if (shakeCount >= maxShakes) {
+      clearInterval(shakeInterval);
+      
+      // Return to normal size after shaking
+      setTimeout(() => {
+        magicBall.style.transform = 'scale(1)';
+        
+        // Get a random mood
+        getRandomMood();
+        
+        // Remove the animation class after a delay
+        setTimeout(() => {
+          document.getElementById('ballEight').classList.remove('animating-eight');
+        }, 1000);
+      }, 500);
+    }
+  });
     let shakeCount = 0;
     const maxShakes = 5;
     const shakeInterval = setInterval(() => {
