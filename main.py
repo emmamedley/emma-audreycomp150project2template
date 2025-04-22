@@ -135,11 +135,9 @@ def index():
 
 @app.route('/get_answer', methods=['POST'])
 def get_answer():
-    # Get a random response
+
     answer = random.choice(RESPONSES)
     return jsonify({'answer': answer})
-
-# Update the get_song route in main.py
 
 @app.route('/get_song', methods=['POST'])
 def get_song():
@@ -151,21 +149,180 @@ def get_song():
     if 'access_token' not in session:
         return jsonify({'error': 'Not authenticated with Spotify', 'auth_url': get_spotify_auth_url()})
     
-    # Call Spotify API to get recommendations
     try:
         if use_personalized:
             song = get_personalized_recommendation(mood)
         else:
-            # Fall back to genre-based if personalization is disabled
             genres = EXPANDED_MOOD_MAPPING.get(mood, MOOD_GENRES.get(mood, mood))
             song = get_spotify_recommendation(genres)
             
         return jsonify({'song': song})
     except Exception as e:
         return jsonify({'error': str(e)})
-    # Add these functions to main.py
 
 def get_user_top_items(item_type, time_range='medium_term', limit=10):
+    """
+    Get user's top tracks or artists
+    item_type: 'tracks' or 'artists'
+    time_range: 'short_term' (4 weeks), 'medium_term' (6 months), or 'long_term' (years)
+    """
+    if 'access_token' not in session:
+        raise Exception("Not authenticated with Spotify")
+    
+    # Refresh token if needed
+    if not refresh_token_if_expired():
+        raise Exception("Failed to refresh token. Please reconnect to Spotify.")
+    
+    url = f'https://api.spotify.com/v1/me/top/{item_type}'
+    
+    headers = {
+        'Authorization': f'Bearer {session["access_token"]}',
+        'Content-Type': 'application/json'
+    }
+    
+    params = {
+        'time_range': time_range,
+        'limit': limit
+    }
+    
+    response = requests.get(url, headers=headers, params=params)
+    
+    # Check if token expired
+    if response.status_code == 401:
+        # Try refreshing token once more
+        if refresh_token_if_expired():
+            # Retry request with new token
+            headers['Authorization'] = f'Bearer {session["access_token"]}'
+            response = requests.get(url, headers=headers, params=params)
+        else:
+            raise Exception("Spotify session expired. Please reconnect.")
+    
+    response.raise_for_status()
+    return response.json()
+
+def get_personalized_recommendation(mood=None):
+    """Get song recommendation based on user's listening history and mood"""
+    try:
+        # Refresh token if needed
+        if not refresh_token_if_expired():
+            raise Exception("Failed to refresh token. Please reconnect to Spotify.")
+        
+        # First, get user's top tracks and artists
+        seed_tracks = []
+        seed_artists = []
+        
+        try:
+            top_tracks = get_user_top_items('tracks')
+            if top_tracks and 'items' in top_tracks and top_tracks['items']:
+                seed_tracks = [track['id'] for track in top_tracks['items'][:2]]
+        except Exception as e:
+            print(f"Error getting top tracks: {str(e)}")
+            
+        try:
+            top_artists = get_user_top_items('artists')
+            if top_artists and 'items' in top_artists and top_artists['items']:
+                seed_artists = [artist['id'] for artist in top_artists['items'][:2]]
+        except Exception as e:
+            print(f"Error getting top artists: {str(e)}")
+        
+        # Get genres based on mood if provided
+        seed_genres = []
+        if mood:
+            genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
+            seed_genres = genres.split(',')[:1]  # Take just the first genre to leave room for tracks and artists
+        
+        # If we couldn't get any seeds, fall back to non-personalized recommendation
+        if not seed_tracks and not seed_artists and not seed_genres:
+            if mood:
+                genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
+                return get_spotify_recommendation(genres)
+            else:
+                return {"name": "No recommendation data available", "artist": "", "url": ""}
+        
+        # Build recommendation request
+        recommendations_url = 'https://api.spotify.com/v1/recommendations'
+        
+        headers = {
+            'Authorization': f'Bearer {session["access_token"]}',
+            'Content-Type': 'application/json'
+        }
+        
+        # We can use up to 5 seed values total (tracks, artists, genres combined)
+        params = {
+            'limit': 1
+        }
+        
+        # Add available seeds, prioritizing tracks and artists over genres
+        if seed_tracks:
+            params['seed_tracks'] = ','.join(seed_tracks[:2])
+        
+        if seed_artists:
+            # Limit to leave room for tracks
+            remaining_seeds = 5 - len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
+            if remaining_seeds > 0:
+                params['seed_artists'] = ','.join(seed_artists[:remaining_seeds])
+        
+        # Add genres if we still have room
+        if seed_genres:
+            used_seeds = len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
+            used_seeds += len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0)
+            
+            if used_seeds < 5:
+                remaining_seeds = 5 - used_seeds
+                params['seed_genres'] = ','.join(seed_genres[:remaining_seeds])
+        
+        # If mood is provided, add audio feature targets
+        if mood:
+            if mood.lower() in ['happy', 'energetic', 'upbeat', 'lively', 'cheerful', 'excited']:
+                params['target_energy'] = 0.8
+                params['target_valence'] = 0.7
+            elif mood.lower() in ['sad', 'melancholic', 'gloomy', 'depressed', 'sorrowful']:
+                params['target_energy'] = 0.4
+                params['target_valence'] = 0.3
+            elif mood.lower() in ['relaxed', 'calm', 'peaceful', 'tranquil', 'mellow']:
+                params['target_energy'] = 0.3
+                params['target_tempo'] = 90
+            elif mood.lower() in ['angry', 'intense', 'furious', 'outraged']:
+                params['target_energy'] = 0.8
+                params['target_valence'] = 0.4
+
+        response = requests.get(recommendations_url, headers=headers, params=params)
+        
+        # Check for token expiration
+        if response.status_code == 401:
+            # Try refreshing token once more
+            if refresh_token_if_expired():
+                # Retry request with new token
+                headers['Authorization'] = f'Bearer {session["access_token"]}'
+                response = requests.get(recommendations_url, headers=headers, params=params)
+            else:
+                raise Exception("Spotify session expired. Please reconnect.")
+                
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data['tracks']:
+            return {"name": "No song found", "artist": "", "url": ""}
+        
+        track = data['tracks'][0]
+        song_info = {
+            "name": track['name'],
+            "artist": track['artists'][0]['name'],
+            "url": track['external_urls']['spotify'],
+            "preview_url": track['preview_url'],
+            "album_image": track['album']['images'][0]['url'] if track['album']['images'] else "",
+        }
+        
+        return song_info
+    
+    except Exception as e:
+        # Fall back to non-personalized recommendation if there's an error
+        print(f"Error getting personalized recommendation: {str(e)}")
+        if mood:
+            genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
+            return get_spotify_recommendation(genres)
+        else:
+            return {"name": "Error getting recommendation", "artist": "", "url": ""}
     """
     Get user's top tracks or artists
     item_type: 'tracks' or 'artists'
