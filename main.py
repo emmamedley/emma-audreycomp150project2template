@@ -135,7 +135,6 @@ def index():
 
 @app.route('/get_answer', methods=['POST'])
 def get_answer():
-
     answer = random.choice(RESPONSES)
     return jsonify({'answer': answer})
 
@@ -161,24 +160,83 @@ def get_song():
         return jsonify({'error': str(e)})
 
 def get_user_top_items(item_type, time_range='medium_term', limit=10):
-
+    """
+    Get user's top tracks or artists
+    item_type: 'tracks' or 'artists'
+    time_range: 'short_term' (4 weeks), 'medium_term' (6 months), or 'long_term' (years)
+    """
+    if 'access_token' not in session:
+        raise Exception("Not authenticated with Spotify")
+    
+    # Refresh token if needed
+    if not refresh_token_if_expired():
+        raise Exception("Failed to refresh token. Please reconnect to Spotify.")
+    
+    url = f'https://api.spotify.com/v1/me/top/{item_type}'
+    
+    headers = {
+        'Authorization': f'Bearer {session["access_token"]}',
+        'Content-Type': 'application/json'
+    }
+    
+    params = {
+        'time_range': time_range,
+        'limit': limit
+    }
+    
+    response = requests.get(url, headers=headers, params=params)
+    
+    # Check if token expired
+    if response.status_code == 401:
+        # Try refreshing token once more
+        if refresh_token_if_expired():
+            # Retry request with new token
+            headers['Authorization'] = f'Bearer {session["access_token"]}'
+            response = requests.get(url, headers=headers, params=params)
+        else:
+            raise Exception("Spotify session expired. Please reconnect.")
+    
+    response.raise_for_status()
+    return response.json()
 
 def get_personalized_recommendation(mood=None):
     """Get song recommendation based on user's listening history and mood"""
     try:
-        # First, get user's top tracks and artists
-        top_tracks = get_user_top_items('tracks')
-        top_artists = get_user_top_items('artists')
+        # Refresh token if needed
+        if not refresh_token_if_expired():
+            raise Exception("Failed to refresh token. Please reconnect to Spotify.")
         
-        # Extract IDs for the API call
-        seed_tracks = [track['id'] for track in top_tracks['items'][:2]]
-        seed_artists = [artist['id'] for artist in top_artists['items'][:2]]
+        # First, get user's top tracks and artists
+        seed_tracks = []
+        seed_artists = []
+        
+        try:
+            top_tracks = get_user_top_items('tracks')
+            if top_tracks and 'items' in top_tracks and top_tracks['items']:
+                seed_tracks = [track['id'] for track in top_tracks['items'][:2]]
+        except Exception as e:
+            print(f"Error getting top tracks: {str(e)}")
+            
+        try:
+            top_artists = get_user_top_items('artists')
+            if top_artists and 'items' in top_artists and top_artists['items']:
+                seed_artists = [artist['id'] for artist in top_artists['items'][:2]]
+        except Exception as e:
+            print(f"Error getting top artists: {str(e)}")
         
         # Get genres based on mood if provided
         seed_genres = []
         if mood:
             genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
             seed_genres = genres.split(',')[:1]  # Take just the first genre to leave room for tracks and artists
+        
+        # If we couldn't get any seeds, fall back to non-personalized recommendation
+        if not seed_tracks and not seed_artists and not seed_genres:
+            if mood:
+                genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
+                return get_spotify_recommendation(genres)
+            else:
+                return {"name": "No recommendation data available", "artist": "", "url": ""}
         
         # Build recommendation request
         recommendations_url = 'https://api.spotify.com/v1/recommendations'
@@ -200,29 +258,45 @@ def get_personalized_recommendation(mood=None):
         if seed_artists:
             # Limit to leave room for tracks
             remaining_seeds = 5 - len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
-            params['seed_artists'] = ','.join(seed_artists[:remaining_seeds])
+            if remaining_seeds > 0:
+                params['seed_artists'] = ','.join(seed_artists[:remaining_seeds])
         
         # Add genres if we still have room
-        if seed_genres and len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0) + len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0) < 5:
-            remaining_seeds = 5 - len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0) - len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0)
-            params['seed_genres'] = ','.join(seed_genres[:remaining_seeds])
+        if seed_genres:
+            used_seeds = len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
+            used_seeds += len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0)
+            
+            if used_seeds < 5:
+                remaining_seeds = 5 - used_seeds
+                params['seed_genres'] = ','.join(seed_genres[:remaining_seeds])
         
         # If mood is provided, add audio feature targets
         if mood:
-            if mood.lower() in ['happy', 'energetic', 'upbeat', 'lively']:
+            if mood.lower() in ['happy', 'energetic', 'upbeat', 'lively', 'cheerful', 'excited']:
                 params['target_energy'] = 0.8
                 params['target_valence'] = 0.7
-            elif mood.lower() in ['sad', 'melancholic', 'gloomy']:
+            elif mood.lower() in ['sad', 'melancholic', 'gloomy', 'depressed', 'sorrowful']:
                 params['target_energy'] = 0.4
                 params['target_valence'] = 0.3
-            elif mood.lower() in ['relaxed', 'calm', 'peaceful']:
+            elif mood.lower() in ['relaxed', 'calm', 'peaceful', 'tranquil', 'mellow']:
                 params['target_energy'] = 0.3
                 params['target_tempo'] = 90
-            elif mood.lower() in ['angry', 'intense']:
+            elif mood.lower() in ['angry', 'intense', 'furious', 'outraged']:
                 params['target_energy'] = 0.8
                 params['target_valence'] = 0.4
 
         response = requests.get(recommendations_url, headers=headers, params=params)
+        
+        # Check for token expiration
+        if response.status_code == 401:
+            # Try refreshing token once more
+            if refresh_token_if_expired():
+                # Retry request with new token
+                headers['Authorization'] = f'Bearer {session["access_token"]}'
+                response = requests.get(recommendations_url, headers=headers, params=params)
+            else:
+                raise Exception("Spotify session expired. Please reconnect.")
+                
         response.raise_for_status()
         data = response.json()
         
@@ -243,7 +317,65 @@ def get_personalized_recommendation(mood=None):
     except Exception as e:
         # Fall back to non-personalized recommendation if there's an error
         print(f"Error getting personalized recommendation: {str(e)}")
-        return get_spotify_recommendation(mood) if mood else {"name": "Error getting recommendation", "artist": "", "url": ""}
+        if mood:
+            genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
+            return get_spotify_recommendation(genres)
+        else:
+            return {"name": "Error getting recommendation", "artist": "", "url": ""}
+
+def get_spotify_recommendation(genres):
+    """Get song recommendation based on genres"""
+    if 'access_token' not in session:
+        raise Exception("Not authenticated with Spotify")
+    
+    # Refresh token if needed
+    if not refresh_token_if_expired():
+        raise Exception("Failed to refresh token. Please reconnect to Spotify.")
+    
+    recommendations_url = 'https://api.spotify.com/v1/recommendations'
+    
+    headers = {
+        'Authorization': f'Bearer {session["access_token"]}',
+        'Content-Type': 'application/json'
+    }
+    
+    # Extract genres and use as seed
+    genre_list = genres.split(',')
+    seed_genres = ','.join(genre_list[:5])  # Spotify allows max 5 seed values
+    
+    params = {
+        'seed_genres': seed_genres,
+        'limit': 1  # Just get one recommendation
+    }
+    
+    response = requests.get(recommendations_url, headers=headers, params=params)
+    
+    # Check if token expired
+    if response.status_code == 401:
+        # Try refreshing token once more
+        if refresh_token_if_expired():
+            # Retry request with new token
+            headers['Authorization'] = f'Bearer {session["access_token"]}'
+            response = requests.get(recommendations_url, headers=headers, params=params)
+        else:
+            raise Exception("Spotify session expired. Please reconnect.")
+    
+    response.raise_for_status()
+    data = response.json()
+    
+    if not data['tracks']:
+        return {"name": "No song found for your mood", "artist": "", "url": ""}
+    
+    track = data['tracks'][0]
+    song_info = {
+        "name": track['name'],
+        "artist": track['artists'][0]['name'],
+        "url": track['external_urls']['spotify'],
+        "preview_url": track['preview_url'],
+        "album_image": track['album']['images'][0]['url'] if track['album']['images'] else "",
+    }
+    
+    return song_info
 
 @app.route('/spotify-auth')
 def spotify_auth():
@@ -261,7 +393,6 @@ def spotify_callback():
             session['access_token'] = token_data['access_token']
             session['refresh_token'] = token_data.get('refresh_token')
             
-        
             import time
             session['token_expiry'] = int(time.time()) + token_data.get('expires_in', 3600)
             
@@ -270,6 +401,29 @@ def spotify_callback():
             return redirect(url_for('index', spotify_error=str(e)))
     
     return redirect(url_for('index', spotify_error='Authorization failed'))
+
+def get_spotify_token(code):
+    """Exchange authorization code for access token"""
+    token_url = 'https://accounts.spotify.com/api/token'
+    
+    # Encode client ID and secret for Basic Auth
+    auth_header = base64.b64encode(f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}".encode()).decode()
+    
+    headers = {
+        'Authorization': f'Basic {auth_header}',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    data = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': SPOTIFY_REDIRECT_URI
+    }
+    
+    response = requests.post(token_url, headers=headers, data=data)
+    response.raise_for_status()
+    
+    return response.json()
 
 def refresh_token_if_expired():
     """Check if token is expired and refresh if needed"""
@@ -320,8 +474,6 @@ def refresh_token_if_expired():
     
     return True
 
-# Update the get_spotify_auth_url function in main.py
-
 def get_spotify_auth_url():
     """Generate Spotify authorization URL with extended permissions"""
     params = {
@@ -334,3 +486,6 @@ def get_spotify_auth_url():
     auth_url = 'https://accounts.spotify.com/authorize?'
     auth_url += urllib.parse.urlencode(params)
     return auth_url
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=80)
