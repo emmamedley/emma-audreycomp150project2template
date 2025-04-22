@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const magicBall = document.getElementById('magicBall');
   const answerElement = document.getElementById('answer');
-  const moodSelector = document.getElementById('moodSelector');
+  const moodResultElement = document.getElementById('moodResult');
   const customAdjective = document.getElementById('customAdjective');
   const customMoodBtn = document.getElementById('customMoodBtn');
   const spotifyConnectBtn = document.getElementById('spotifyConnectBtn');
@@ -82,80 +82,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-function getSongRecommendation(mood) {
-  // Reset the answer opacity
-  answerElement.style.opacity = 0;
-  
-  // Hide any previous song recommendation
-  songRecommendation.classList.remove('active');
-  
-  // Get personalization preference
-  const usePersonalized = document.getElementById('personalizedToggle').checked;
-  
-  // Get song recommendation from server
-  axios.post('/get_song', { 
-    mood: mood,
-    personalized: usePersonalized
-  })
-    .then(function(response) {
-      if (response.data.error) {
-        // Handle error (like not authenticated)
-        answerElement.textContent = "You need to connect to Spotify first!";
-        answerElement.style.opacity = 1;
-        
-        if (response.data.auth_url) {
-          // Prompt to connect
-          spotifyStatus.innerHTML = 'Please <a href="' + response.data.auth_url + '">connect to Spotify</a> to get song recommendations';
-          spotifyStatus.style.color = '#ff9800';
+  function getRandomMood() {
+    // Reset UI elements
+    answerElement.style.opacity = 0;
+    moodResultElement.innerHTML = "";
+    moodResultElement.classList.remove('active');
+    songRecommendation.classList.remove('active');
+    
+    // Get random mood from server
+    axios.get('/get_random_mood')
+      .then(function(response) {
+        if (response.data.mood) {
+          const mood = response.data.mood;
+          
+          // Show the mood result
+          moodResultElement.textContent = `Your mood: ${mood.charAt(0).toUpperCase() + mood.slice(1)}`;
+          moodResultElement.classList.add('active');
+          
+          // Update the answer text
+          answerElement.textContent = "Now getting a song recommendation for your mood...";
+          answerElement.style.opacity = 1;
+          
+          // Get song recommendation for this mood
+          getSongRecommendation(mood);
         }
-      } else if (response.data.song) {
-        // Display the song recommendation
-        const song = response.data.song;
-        
-        // Show the text answer
-        const personalizedText = usePersonalized ? " (personalized)" : "";
-        answerElement.textContent = `Based on your "${mood}" mood${personalizedText}, here's a song for you:`;
+      })
+      .catch(function(error) {
+        console.log(error);
+        answerElement.textContent = "Error getting your mood. Try again.";
         answerElement.style.opacity = 1;
-        answerElement.classList.add('fade-in');
-        
-        // Build the song recommendation HTML
-        let songHTML = `
-          <img src="${song.album_image}" alt="${song.name} album cover" class="song-cover">
-          <div class="song-title">${song.name}</div>
-          <div class="song-artist">by ${song.artist}</div>
-          <a href="${song.url}" target="_blank" class="spotify-play-button">
-            Play on Spotify
-          </a>
-        `;
-        
-        // Add audio preview if available
-        if (song.preview_url) {
-          songHTML += `
-            <div class="preview-player" style="margin-top: 15px;">
-              <audio controls src="${song.preview_url}"></audio>
-            </div>
-          `;
-        }
-        
-        // Display the song recommendation
-        songRecommendation.innerHTML = songHTML;
-        songRecommendation.classList.add('active');
-        
-        // Remove the animation class after it completes
-        setTimeout(() => {
-          answerElement.classList.remove('fade-in');
-        }, 1500);
-      }
-    })
-    .catch(function(error) {
-      console.log(error);
-      answerElement.textContent = "Error getting your song recommendation. Try again.";
-      answerElement.style.opacity = 1;
-    });
-}
+      });
+  }
+  
+  function getSongRecommendation(mood) {
+    // Get personalization preference
+    const usePersonalized = document.getElementById('personalizedToggle').checked;
     
     // Get song recommendation from server
-    axios.post('/get_song', { mood: mood })
+    axios.post('/get_song', { 
+      mood: mood,
+      personalized: usePersonalized
+    })
       .then(function(response) {
         if (response.data.error) {
           // Handle error (like not authenticated)
@@ -172,7 +139,8 @@ function getSongRecommendation(mood) {
           const song = response.data.song;
           
           // Show the text answer
-          answerElement.textContent = `Based on your "${mood}" mood, here's a song for you:`;
+          const personalizedText = usePersonalized ? " (personalized)" : "";
+          answerElement.textContent = `Based on your "${mood}" mood${personalizedText}, here's a song for you:`;
           answerElement.style.opacity = 1;
           answerElement.classList.add('fade-in');
           
@@ -248,9 +216,6 @@ function getSongRecommendation(mood) {
   
   // Magic 8 Ball click handler
   magicBall.addEventListener('click', function() {
-    // Get the selected mood
-    const mood = moodSelector.value;
-    
     // Visual feedback for the click
     magicBall.style.transform = 'scale(0.95)';
     
@@ -276,8 +241,8 @@ function getSongRecommendation(mood) {
         setTimeout(() => {
           magicBall.style.transform = 'scale(1)';
           
-          // Get song recommendation
-          getSongRecommendation(mood);
+          // Get random mood
+          getRandomMood();
         }, 500);
       }
     }, 100);
@@ -306,11 +271,15 @@ function getSongRecommendation(mood) {
       }
       animate();
       
+      // Reset mood result if present
+      moodResultElement.innerHTML = "";
+      moodResultElement.classList.remove('active');
+      
       // Get song recommendation
       getSongRecommendation(customMood);
     } else {
       // Provide feedback if input is empty
-      answerElement.textContent = "Please enter an adjective first!";
+      answerElement.textContent = "Please enter a mood first!";
       answerElement.style.opacity = 1;
       
       // Shake the input field to indicate it needs attention
