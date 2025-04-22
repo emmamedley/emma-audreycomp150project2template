@@ -6,15 +6,15 @@ import base64
 import urllib.parse
 
 app = Flask(__name__)
-# Set a secret key for sessions - in production use a strong, randomly generated key
+
 app.secret_key = "your_secret_key_here"
 
-# Spotify API credentials - you'll need to replace these with your own
+
 SPOTIFY_CLIENT_ID = "c0f94698a04a46f99e22cda3b8f64029"
 SPOTIFY_CLIENT_SECRET = "e3058ec934944a559421b5d6f72f9ede"
 SPOTIFY_REDIRECT_URI = "http://localhost:80/spotify-callback"
 
-# List of Magic 8 Ball responses as Python code
+
 RESPONSES = [
     "if question:\n  return True  # It is certain.",
     "result = True  # It is decidedly so.",
@@ -50,9 +50,9 @@ MOOD_GENRES = {
     "nostalgic": "oldies,90s,80s"
 }
 
-# Expanded mood-genre mappings to handle more adjectives
+
 EXPANDED_MOOD_MAPPING = {
-    # Happy-related
+   
     "joyful": "happy,feel-good,pop",
     "cheerful": "happy,feel-good,pop",
     "excited": "happy,edm,pop",
@@ -60,7 +60,7 @@ EXPANDED_MOOD_MAPPING = {
     "elated": "happy,uplifting,pop",
     "ecstatic": "happy,edm,festival",
     
-    # Sad-related
+   
     "melancholic": "sad,indie,blues",
     "gloomy": "sad,dark,blues",
     "depressed": "sad,emo,indie",
@@ -68,47 +68,47 @@ EXPANDED_MOOD_MAPPING = {
     "miserable": "sad,blues,emotional",
     "heartbroken": "sad,breakup,emotional",
     
-    # Angry-related
+  
     "furious": "metal,hardcore,punk",
     "irritated": "rock,punk,alt-rock",
     "frustrated": "rock,grunge,alt-rock",
     "outraged": "metal,hardcore,rock",
     "mad": "rock,alt-rock,punk",
     
-    # Relaxed-related
+   
     "calm": "chill,ambient,acoustic",
     "peaceful": "ambient,meditation,acoustic",
     "tranquil": "ambient,piano,classical",
     "serene": "ambient,instrumental,classical",
     "mellow": "chill,lofi,acoustic",
     
-    # Energetic-related
+  
     "lively": "dance,electronic,pop",
     "vibrant": "dance,pop,edm",
     "dynamic": "electronic,edm,house",
     "pumped": "workout,electronic,hip-hop",
     "active": "workout,electronic,rock",
     
-    # Romantic-related
+   
     "loving": "romance,r-n-b,soul",
     "passionate": "romance,latin,r-n-b",
     "affectionate": "romance,acoustic,soft-rock",
     "tender": "romance,piano,acoustic",
     "intimate": "romance,jazz,soul",
     
-    # Focused-related
+    
     "concentrated": "focus,study,instrumental",
     "determined": "focus,motivational,instrumental",
     "dedicated": "focus,instrumental,classical",
     "attentive": "focus,ambient,instrumental",
     
-    # Nostalgic-related
+ 
     "sentimental": "oldies,90s,80s",
     "reminiscent": "oldies,70s,60s",
     "retro": "80s,disco,synthwave",
     "vintage": "60s,70s,oldies",
     
-    # More unique moods
+  
     "dreamy": "dream-pop,ambient,indie",
     "mysterious": "dark-ambient,soundtrack,electronic",
     "whimsical": "indie-pop,folk,quirky",
@@ -149,9 +149,9 @@ def get_random_mood():
 def get_song():
     data = request.json
     mood = data.get('mood', '').lower()
-    use_personalized = data.get('personalized', True)  # Default to personalized recommendations
+    use_personalized = data.get('personalized', True)  
     
-    # Check if the user is authenticated with Spotify
+   
     if 'access_token' not in session:
         return jsonify({'error': 'Not authenticated with Spotify', 'auth_url': get_spotify_auth_url()})
     
@@ -175,7 +175,7 @@ def get_user_top_items(item_type, time_range='medium_term', limit=10):
     if 'access_token' not in session:
         raise Exception("Not authenticated with Spotify")
     
-    # Refresh token if needed
+
     if not refresh_token_if_expired():
         raise Exception("Failed to refresh token. Please reconnect to Spotify.")
     
@@ -193,11 +193,11 @@ def get_user_top_items(item_type, time_range='medium_term', limit=10):
     
     response = requests.get(url, headers=headers, params=params)
     
-    # Check if token expired
+  
     if response.status_code == 401:
-        # Try refreshing token once more
+      
         if refresh_token_if_expired():
-            # Retry request with new token
+           
             headers['Authorization'] = f'Bearer {session["access_token"]}'
             response = requests.get(url, headers=headers, params=params)
         else:
@@ -209,11 +209,11 @@ def get_user_top_items(item_type, time_range='medium_term', limit=10):
 def get_personalized_recommendation(mood=None):
     """Get song recommendation based on user's listening history and mood"""
     try:
-        # Refresh token if needed
+       
         if not refresh_token_if_expired():
             raise Exception("Failed to refresh token. Please reconnect to Spotify.")
         
-        # First, get user's top tracks and artists
+      
         seed_tracks = []
         seed_artists = []
         
@@ -231,13 +231,13 @@ def get_personalized_recommendation(mood=None):
         except Exception as e:
             print(f"Error getting top artists: {str(e)}")
         
-        # Get genres based on mood if provided
+        
         seed_genres = []
         if mood:
             genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
-            seed_genres = genres.split(',')[:1]  # Take just the first genre to leave room for tracks and artists
+            seed_genres = genres.split(',')[:1]  
         
-        # If we couldn't get any seeds, fall back to non-personalized recommendation
+  
         if not seed_tracks and not seed_artists and not seed_genres:
             if mood:
                 genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
@@ -245,7 +245,7 @@ def get_personalized_recommendation(mood=None):
             else:
                 return {"name": "No recommendation data available", "artist": "", "url": ""}
         
-        # Build recommendation request
+        
         recommendations_url = 'https://api.spotify.com/v1/recommendations'
         
         headers = {
@@ -253,22 +253,22 @@ def get_personalized_recommendation(mood=None):
             'Content-Type': 'application/json'
         }
         
-        # We can use up to 5 seed values total (tracks, artists, genres combined)
+        
         params = {
             'limit': 1
         }
         
-        # Add available seeds, prioritizing tracks and artists over genres
+        
         if seed_tracks:
             params['seed_tracks'] = ','.join(seed_tracks[:2])
         
         if seed_artists:
-            # Limit to leave room for tracks
+           
             remaining_seeds = 5 - len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
             if remaining_seeds > 0:
                 params['seed_artists'] = ','.join(seed_artists[:remaining_seeds])
         
-        # Add genres if we still have room
+      
         if seed_genres:
             used_seeds = len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
             used_seeds += len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0)
@@ -277,7 +277,7 @@ def get_personalized_recommendation(mood=None):
                 remaining_seeds = 5 - used_seeds
                 params['seed_genres'] = ','.join(seed_genres[:remaining_seeds])
         
-        # If mood is provided, add audio feature targets
+        
         if mood:
             if mood.lower() in ['happy', 'energetic', 'upbeat', 'lively', 'cheerful', 'excited']:
                 params['target_energy'] = 0.8
@@ -294,11 +294,11 @@ def get_personalized_recommendation(mood=None):
 
         response = requests.get(recommendations_url, headers=headers, params=params)
         
-        # Check for token expiration
+        
         if response.status_code == 401:
-            # Try refreshing token once more
+           
             if refresh_token_if_expired():
-                # Retry request with new token
+                
                 headers['Authorization'] = f'Bearer {session["access_token"]}'
                 response = requests.get(recommendations_url, headers=headers, params=params)
             else:
@@ -322,7 +322,7 @@ def get_personalized_recommendation(mood=None):
         return song_info
     
     except Exception as e:
-        # Fall back to non-personalized recommendation if there's an error
+        
         print(f"Error getting personalized recommendation: {str(e)}")
         if mood:
             genres = EXPANDED_MOOD_MAPPING.get(mood.lower(), MOOD_GENRES.get(mood.lower(), mood.lower()))
@@ -335,7 +335,7 @@ def get_spotify_recommendation(genres):
     if 'access_token' not in session:
         raise Exception("Not authenticated with Spotify")
     
-    # Refresh token if needed
+    
     if not refresh_token_if_expired():
         raise Exception("Failed to refresh token. Please reconnect to Spotify.")
     
@@ -346,22 +346,22 @@ def get_spotify_recommendation(genres):
         'Content-Type': 'application/json'
     }
     
-    # Extract genres and use as seed
+    
     genre_list = genres.split(',')
-    seed_genres = ','.join(genre_list[:5])  # Spotify allows max 5 seed values
+    seed_genres = ','.join(genre_list[:5])  
     
     params = {
         'seed_genres': seed_genres,
-        'limit': 1  # Just get one recommendation
+        'limit': 1  
     }
     
     response = requests.get(recommendations_url, headers=headers, params=params)
     
-    # Check if token expired
+   
     if response.status_code == 401:
-        # Try refreshing token once more
+        
         if refresh_token_if_expired():
-            # Retry request with new token
+            
             headers['Authorization'] = f'Bearer {session["access_token"]}'
             response = requests.get(recommendations_url, headers=headers, params=params)
         else:
@@ -394,7 +394,7 @@ def spotify_callback():
     code = request.args.get('code')
     
     if code:
-        # Exchange code for access token
+        
         try:
             token_data = get_spotify_token(code)
             session['access_token'] = token_data['access_token']
