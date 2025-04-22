@@ -8,12 +8,45 @@ document.addEventListener('DOMContentLoaded', function() {
   const spotifyStatus = document.getElementById('spotifyStatus');
   const songRecommendation = document.getElementById('songRecommendation');
 
-  // Star explosion animation setup
+    const createStars = () => {
+      const colors = ['pink', 'yellow', 'blue'];
+      const numStars = 100;
+      
+      for (let i = 0; i < numStars; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        star.classList.add(colors[Math.floor(Math.random() * colors.length)]);
+        
+  
+        star.style.left = `${Math.random() * 100}vw`;
+        star.style.top = `${Math.random() * 100}vh`;
+        
+      
+        const size = Math.random() * 4 + 1;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        
+      
+        star.style.animationDelay = `${Math.random() * 4}s`;
+        
+        document.body.appendChild(star);
+      }
+    };
+    
+    createStars();
+    
+
+    const magicBall = document.getElementById('magicBall');
+    const answerElement = document.getElementById('answer');
+   
+  });
+
+
   const canvas = document.getElementById('explosionCanvas');
   const ctx = canvas.getContext('2d');
   let stars = [];
 
-  // Set canvas to full window size
+
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -21,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // Star class for explosion effect
+
   class Star {
     constructor(x, y) {
       this.x = x;
@@ -39,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
       this.y += this.speedY;
       this.life -= this.decay;
       
-      // Add gravity effect
+    
       this.speedY += 0.05;
     }
     
@@ -53,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Create a star explosion at coordinates
+
   function createExplosion(x, y) {
     const starCount = 100; // Number of stars in explosion
     for (let i = 0; i < starCount; i++) {
