@@ -343,3 +343,43 @@
   opacity: 1;
   animation: fadeIn 1.5s;
 }
+.star {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: twinkle 4s infinite ease-in-out;
+  z-index: 0;
+}
+
+.star.pink {
+  background-color: #ff69b4;
+  box-shadow: 0 0 10px #ff69b4, 0 0 20px #ff69b4;
+}
+
+.star.yellow {
+  background-color: #ffff00;
+  box-shadow: 0 0 10px #ffff00, 0 0 20px #ffff00;
+}
+
+.star.blue {
+  background-color: #00bfff;
+  box-shadow: 0 0 10px #00bfff, 0 0 20px #00bfff;
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+
+body {
+  position: relative;
+  overflow-x: hidden;
+  /* Keep your existing body styles */
+}
