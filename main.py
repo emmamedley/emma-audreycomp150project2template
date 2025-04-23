@@ -7,12 +7,13 @@ import urllib.parse
 
 app = Flask(__name__)
 
-app.secret_key = "your_secret_key_here"
+app.secret_key = "make_something_up"
 
 
-SPOTIFY_CLIENT_ID = "c0f94698a04a46f99e22cda3b8f64029"
-SPOTIFY_CLIENT_SECRET = "e3058ec934944a559421b5d6f72f9ede"
-SPOTIFY_REDIRECT_URI = "http://localhost:80/spotify-callback"
+SPOTIFY_CLIENT_ID = "ba592faeeff340aa84caeccd1ca94501"
+SPOTIFY_CLIENT_SECRET = "94f3410b11dd4dde99f0f3d141f751ad"
+SPOTIFY_REDIRECT_URI = "https://127.0.0.1.nip.io:5000/spotify-callback"
+
 
 
 RESPONSES = [
@@ -206,6 +207,14 @@ def get_user_top_items(item_type, time_range='medium_term', limit=10):
     response.raise_for_status()
     return response.json()
 
+def get_valid_seed_genres():
+    url = 'https://api.spotify.com/v1/recommendations/available-genre-seeds'
+    headers = {'Authorization': f'Bearer {session["access_token"]}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return set(response.json()['genres'])
+
+
 def get_personalized_recommendation(mood=None):
     """Get song recommendation based on user's listening history and mood"""
     try:
@@ -270,8 +279,8 @@ def get_personalized_recommendation(mood=None):
         
       
         if seed_genres:
-            used_seeds = len(params.get('seed_tracks', '').split(',') if 'seed_tracks' in params else 0)
-            used_seeds += len(params.get('seed_artists', '').split(',') if 'seed_artists' in params else 0)
+            used_seeds = len(params.get('seed_tracks', '').split(',')) if 'seed_tracks' in params else 0
+            used_seeds += len(params.get('seed_artists', '').split(',')) if 'seed_artists' in params else 0
             
             if used_seeds < 5:
                 remaining_seeds = 5 - used_seeds
@@ -331,58 +340,50 @@ def get_personalized_recommendation(mood=None):
             return {"name": "Error getting recommendation", "artist": "", "url": ""}
 
 def get_spotify_recommendation(genres):
-    """Get song recommendation based on genres"""
     if 'access_token' not in session:
         raise Exception("Not authenticated with Spotify")
-    
-    
+
     if not refresh_token_if_expired():
         raise Exception("Failed to refresh token. Please reconnect to Spotify.")
-    
+
     recommendations_url = 'https://api.spotify.com/v1/recommendations'
-    
     headers = {
         'Authorization': f'Bearer {session["access_token"]}',
         'Content-Type': 'application/json'
     }
-    
-    
+
     genre_list = genres.split(',')
-    seed_genres = ','.join(genre_list[:5])  
-    
+    valid_genres = get_valid_seed_genres()
+    filtered = [g for g in genre_list if g in valid_genres]
+
+    if not filtered:
+        return {"name": "No valid genres found for this mood", "artist": "", "url": ""}
+
+    seed_genres = ','.join(filtered[:5])
     params = {
         'seed_genres': seed_genres,
-        'limit': 1  
+        'limit': 1
     }
-    
+
     response = requests.get(recommendations_url, headers=headers, params=params)
-    
-   
-    if response.status_code == 401:
-        
-        if refresh_token_if_expired():
-            
-            headers['Authorization'] = f'Bearer {session["access_token"]}'
-            response = requests.get(recommendations_url, headers=headers, params=params)
-        else:
-            raise Exception("Spotify session expired. Please reconnect.")
-    
+    if response.status_code == 401 and refresh_token_if_expired():
+        headers['Authorization'] = f'Bearer {session["access_token"]}'
+        response = requests.get(recommendations_url, headers=headers, params=params)
+
     response.raise_for_status()
     data = response.json()
-    
     if not data['tracks']:
         return {"name": "No song found for your mood", "artist": "", "url": ""}
-    
+
     track = data['tracks'][0]
-    song_info = {
+    return {
         "name": track['name'],
         "artist": track['artists'][0]['name'],
         "url": track['external_urls']['spotify'],
         "preview_url": track['preview_url'],
         "album_image": track['album']['images'][0]['url'] if track['album']['images'] else "",
     }
-    
-    return song_info
+
 
 @app.route('/spotify-auth')
 def spotify_auth():
@@ -495,4 +496,10 @@ def get_spotify_auth_url():
     return auth_url
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=80)
+    app.run(
+        debug=True,
+        ssl_context="adhoc",  # Flask generates a self-signed cert automatically
+        host="0.0.0.0",
+        port=5000
+    )
+
